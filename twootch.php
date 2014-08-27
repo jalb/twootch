@@ -19,6 +19,7 @@
 // 3. parametrize object construction.
 // 4. store download files in a hierarchy?
 // 5. timeout on downloading / asynchronous
+// 6. disk space checking 
 
 class TwitchPastDownload {
 	private $_channel;
