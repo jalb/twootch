@@ -50,7 +50,6 @@ class TwitchPastDownload {
 		);
 		curl_setopt_array ( $c, $options );
 		$json = curl_exec ( $c );
-		var_dump($json);
 		$json_a = json_decode ( $json, true );
 		
 		// Reverse array to start with oldest videos, ie more likely to disappear.
