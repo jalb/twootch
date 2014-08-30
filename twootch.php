@@ -26,16 +26,16 @@ class TwitchPastDownload {
 	private $_url;
 	private $_download_directory;
 	
-	function __construct() {
+	function __construct($channel) {
+		$this->_channel = $channel;
 		date_default_timezone_set ( 'Europe/Paris' );
-		$this->_download_directory = 'downloads';
+		$this->_download_directory = 'downloads' . DIRECTORY_SEPARATOR . $this->_channel;
 		if (! is_dir ( $this->_download_directory )) {
-			mkdir ( $this->_download_directory );
+			mkdir ( $this->_download_directory, 0777, true );
 		}
 	}
 	
-	function download_broadcasts($channel, $search_string) {
-		$this->_channel = $channel;
+	function download_broadcasts($search_string) {
 		$this->_url = 'https://api.twitch.tv/kraken/channels/' . $this->_channel . '/videos?limit=200&broadcasts=true';
 		// echo $this->_url . PHP_EOL;
 		
@@ -96,7 +96,7 @@ class TwitchPastDownload {
 					$failed = false;
 					foreach ( $json2_a as $part_number => $video_part ) {
 						// Make a unique part filename
-						$part_filename = $this->_download_directory . '/' . $this->format_title ( $video ['title'] ) . '_' . $id . '_part' . sprintf ( "%02d", $part_number ) . '_' . $video_part ['start_timestamp'] . '.flv';
+						$part_filename = $this->_download_directory . DIRECTORY_SEPARATOR . $this->format_title ( $video ['title'] ) . '_' . $id . '_part' . sprintf ( "%02d", $part_number ) . '_' . $video_part ['start_timestamp'] . '.flv';
 						
 						// Decide if we need to download or not
 						$download = false;
@@ -183,6 +183,6 @@ if (isset ( $argv [2] )) {
 	$search_string = null;
 }
 
-$downloader = new TwitchPastDownload ();
+$downloader = new TwitchPastDownload ($channel);
 
-$downloader->download_broadcasts ($channel, $search_string);
+$downloader->download_broadcasts ($search_string);
