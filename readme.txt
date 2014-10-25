@@ -11,3 +11,9 @@ Maintain a mirror of archived Twitch broadcasts
 	      	      1.1.4.2.1 make temporary part filename
 		      1.1.4.2.2 download to temporary file
 		      1.1.4.2.3 when finished, rename
+
+Check new API
+
+http://johannesbader.ch/2014/01/find-video-url-of-twitch-tv-live-streams-or-past-broadcasts/
+
+http://rg3.github.io/youtube-dl/

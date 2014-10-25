@@ -33,108 +33,135 @@ class TwitchPastDownload {
 		if (! is_dir ( $this->_download_directory )) {
 			mkdir ( $this->_download_directory, 0777, true );
 		}
+		chdir($this->_download_directory);
 	}
 	
 	function download_broadcasts($search_string) {
-		$this->_url = 'https://api.twitch.tv/kraken/channels/' . $this->_channel . '/videos?limit=200&broadcasts=true';
-		// echo $this->_url . PHP_EOL;
+	  $this->_url = 'https://api.twitch.tv/kraken/channels/' . $this->_channel . '/videos?limit=200&broadcasts=true';
+	  // echo $this->_url . PHP_EOL;
 		
-		$c = curl_init ( $this->_url );
-		$options = array (
-				CURLOPT_RETURNTRANSFER => true,
-				CURLOPT_HTTPHEADER => array (
-						'Content-type: application/json' 
-				),
-				CURLOPT_SSL_VERIFYPEER => false,
-				CURLOPT_SSL_VERIFYHOST => 2 
-		);
-		curl_setopt_array ( $c, $options );
-		$json = curl_exec ( $c );
-		$json_a = json_decode ( $json, true );
+	  $c = curl_init ( $this->_url );
+	  $options = array (
+			    CURLOPT_RETURNTRANSFER => true,
+			    CURLOPT_HTTPHEADER => array (
+							 'Content-type: application/json' 
+							 ),
+			    CURLOPT_SSL_VERIFYPEER => false,
+			    CURLOPT_SSL_VERIFYHOST => 2 
+			    );
+	  curl_setopt_array ( $c, $options );
+	  $json = curl_exec ( $c );
+	  $json_a = json_decode ( $json, true );
 		
-		// Reverse array to start with oldest videos, ie more likely to disappear.
-		$json_a ['videos'] = array_reverse ( $json_a ['videos'] );
+	  // Reverse array to start with oldest videos, ie more likely to disappear.
+	  $json_a ['videos'] = array_reverse ( $json_a ['videos'] );
 		
-		// Save some debug information
-		$channel_json = var_export ( $json_a, true );
-		file_put_contents ( 'channel_json_' . $this->_channel . '_' . date ( 'YmdHms' ) . '.txt', $channel_json );
+	  // Save some debug information
+	  $channel_json = var_export ( $json_a, true );
+	  file_put_contents ( 'channel_json_' . $this->_channel . '_' . date ( 'YmdHms' ) . '.txt', $channel_json );
 		
-		if ($search_string) {
-			$search_string = strtolower ( $search_string );
-		}
+	  if ($search_string) {
+	    $search_string = strtolower ( $search_string );
+	  }
 		
-		echo 'Found ' . count ( $json_a ['videos'] ) . ' videos.' . PHP_EOL;
+	  echo 'Found ' . count ( $json_a ['videos'] ) . ' videos.' . PHP_EOL;
 		
-		foreach ( $json_a ['videos'] as $video ) {
-			echo 'Title: ' . $video ['title'] . PHP_EOL;
-			if (! $search_string || strpos ( strtolower ( $video ['title'] ), $search_string ) !== false) {
-				echo 'Match: ' . $video ['title'] . PHP_EOL;
+	  foreach ( $json_a ['videos'] as $video ) {
+	    echo 'Title: ' . $video ['title'] . PHP_EOL;
+	    if (! $search_string || strpos ( strtolower ( $video ['title'] ), $search_string ) !== false) {
+	      echo 'Match: ' . $video ['title'] . PHP_EOL;
 				
-				$id = $video ['_id'];
-				$id = preg_replace ( '/[^0-9.]+/', '', $id );
-				
-				$video_url = "http://api.justin.tv/api/broadcast/by_archive/$id.json";
-				$d = curl_init ( $video_url );
-				$options2 = array (
-						CURLOPT_RETURNTRANSFER => true,
-						CURLOPT_HTTPHEADER => array (
-								'Content-type: application/json' 
-						) 
-				);
-				curl_setopt_array ( $d, $options2 );
-				$json2 = curl_exec ( $d );
-				$json2_a = json_decode ( $json2, true );
-				if ($json2_a !== null) {
-					
-					// Save some debug information
-					$video_json = var_export ( $json2_a, true );
-					file_put_contents ( 'video_json_' . $id . '_' . date ( 'YmdHms' ) . '.txt', $video_json );
-					
-					echo 'Video title: ' . $video ['title'] . PHP_EOL;
-					echo 'Video parts: ' . count ( $json2_a ) . PHP_EOL;
-					
-					$failed = false;
-					foreach ( $json2_a as $part_number => $video_part ) {
-						// Make a unique part filename
-						$part_filename = $this->_download_directory . DIRECTORY_SEPARATOR . $this->format_title ( $video ['title'] ) . '_' . $id . '_part' . sprintf ( "%02d", $part_number ) . '_' . $video_part ['start_timestamp'] . '.flv';
-						
-						// Decide if we need to download or not
-						$download = false;
-						if (file_exists ( $part_filename )) {
-							echo 'File exists: ' . $part_filename . PHP_EOL;
-							// Check file size
-							$filesize = filesize ( $part_filename );
-							if ($filesize !== $video_part ['file_size']) {
-								echo 'File size is ' . $filesize . ', should be ' . $video_part ['file_size'] . ': checking content-length.' . PHP_EOL;
-								// Double check with HTTP content-length, Twitch API file_size is sometimes erroneous
-								$content_length = $this->get_content_length ( $video_part ['video_file_url'] );
-								if ($content_length !== $filesize) {
-									echo 'File size is ' . $filesize . ', should be ' . $content_length . ': downloading.' . PHP_EOL;
-									$download = true;
-								} else {
-									echo 'Content-length matches file size.' . PHP_EOL;
-								}
-							}
-						} else {
-							$download = true;
-						}
-						
-						if ($download) {
-							if (! $this->download_part ( $video_part ['video_file_url'], $part_filename )) {
-								echo 'Could not download ' . $part_filename . PHP_EOL;
-								$failed = true;
-							}
-						} else {
-							echo 'Already downloaded: ' . $part_filename . PHP_EOL;
-						}
-					}
-				} else {
-					echo 'No information on video ' . $id . PHP_EOL;
-				}
-			}
-		}
+	      $id = $video ['_id'];
+	      $id = preg_replace ( '/[^0-9.]+/', '', $id );
+
+	      $this->download_video($video['url']);
+	    }
+	  }
 	}
 	
+	function download_video($url)
+	{
+	  exec("../../youtube-dl '$url'", $array, $exit_code);
+	  if ($exit_code !== 0) {
+	    echo 'youtube-dl ' . $url . ' failed.' . PHP_EOL;
+	  }
+	  foreach ($array as $line)
+	    {
+	      echo $line . PHP_EOL;
+	    }
+	}
+
+	// Old code that worked with deprecated justin.tv API.
+	function download_video_direct($id)
+	{
+	  $video_url = "http://api.justin.tv/api/broadcast/by_archive/$id.json";
+	  $d = curl_init ( $video_url );
+	  $options2 = array (
+			     CURLOPT_RETURNTRANSFER => true,
+			     CURLOPT_HTTPHEADER => array (
+							  'Content-type: application/json' 
+							  ) 
+			     );
+	  curl_setopt_array ( $d, $options2 );
+	  $json2 = curl_exec ( $d );
+	  $http_code= curl_getinfo($d, CURLINFO_HTTP_CODE);
+	  if ($http_code == 200)
+	    {
+	      $json2_a = json_decode ( $json2, true );
+	      if ($json2_a !== null) {
+					
+		// Save some debug information
+		$video_json = var_export ( $json2_a, true );
+		file_put_contents ( 'video_json_' . $id . '_' . date ( 'YmdHms' ) . '.txt', $video_json );
+					
+		echo 'Video title: ' . $video ['title'] . PHP_EOL;
+		echo 'Video parts: ' . count ( $json2_a ) . PHP_EOL;
+					
+		$failed = false;
+		foreach ( $json2_a as $part_number => $video_part ) {
+		  // Make a unique part filename
+		  $part_filename = $this->_download_directory . DIRECTORY_SEPARATOR . $this->format_title ( $video ['title'] ) . '_' . $id . '_part' . sprintf ( "%02d", $part_number ) . '_' . $video_part ['start_timestamp'] . '.flv';
+						
+		  // Decide if we need to download or not
+		  $download = false;
+		  if (file_exists ( $part_filename )) {
+		    echo 'File exists: ' . $part_filename . PHP_EOL;
+		    // Check file size
+		    $filesize = filesize ( $part_filename );
+		    if ($filesize !== $video_part ['file_size']) {
+		      echo 'File size is ' . $filesize . ', should be ' . $video_part ['file_size'] . ': checking content-length.' . PHP_EOL;
+		      // Double check with HTTP content-length, Twitch API file_size is sometimes erroneous
+		      $content_length = $this->get_content_length ( $video_part ['video_file_url'] );
+		      if ($content_length !== $filesize) {
+			echo 'File size is ' . $filesize . ', should be ' . $content_length . ': downloading.' . PHP_EOL;
+			$download = true;
+		      } else {
+			echo 'Content-length matches file size.' . PHP_EOL;
+		      }
+		    }
+		  } else {
+		    $download = true;
+		  }
+						
+		  if ($download) {
+		    if (! $this->download_part ( $video_part ['video_file_url'], $part_filename )) {
+		      echo 'Could not download ' . $part_filename . PHP_EOL;
+		      $failed = true;
+		    }
+		  } else {
+		    echo 'Already downloaded: ' . $part_filename . PHP_EOL;
+		  }
+		}
+	      } else {
+		echo 'No information on video ' . $id . PHP_EOL;
+	      }
+	    }
+	  else {
+	    echo 'Error: ' . $video_url . ': ' . $http_code . PHP_EOL;
+	  }
+	}
+
+
 	private function get_content_length($video_file_url) {
 		$content_length = false;
 		$ch = curl_init ( $video_file_url );
